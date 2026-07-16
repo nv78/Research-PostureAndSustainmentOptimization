@@ -49,7 +49,7 @@ def sustainment_cost(actions: List[SustainmentAction]) -> float:
 
 
 def posture_efficiency(readiness: float, coverage: float, cost: float) -> float:
-    """Composite efficiency metric."""
+    """(readiness * coverage) / log(2 + cost). Offset avoids division by zero when cost=0."""
     return (readiness * coverage) / math.log1p(cost + 1.0)
 
 
@@ -229,3 +229,50 @@ def evss(cev_readiness: float, greedy_readiness: float) -> float:
     Positive values indicate the scenario-weighted optimizer outperforms greedy.
     """
     return cev_readiness - greedy_readiness
+
+
+# ---------------------------------------------------------------------------
+# Experiment 5 metrics
+# ---------------------------------------------------------------------------
+
+
+def assignment_stability(
+    assign_a: Dict[str, str],
+    assign_b: Dict[str, str],
+) -> float:
+    """Fraction of assets with identical location in both assignments (in [0, 1]).
+
+    Returns 1.0 if assignments are identical, 0.0 if every asset moved.
+    Only shared asset IDs are compared; unilateral assets are ignored.
+    """
+    shared = set(assign_a) & set(assign_b)
+    if not shared:
+        return 1.0 if (not assign_a and not assign_b) else 0.0
+    return sum(1 for aid in shared if assign_a[aid] == assign_b[aid]) / len(shared)
+
+
+def contested_zone_coverage(
+    assignment: Dict[str, str],
+    locations: List[Location],
+    threat_center_lat: float,
+    threat_center_lon: float,
+    radius_km: float,
+) -> float:
+    """Fraction of assigned assets placed OUTSIDE the A2/AD contested zone.
+
+    Assets inside radius_km are at high risk; those outside contribute to
+    survivable posture. Returns a value in [0, 1]; higher is safer.
+    """
+    from .core import haversine_distance
+    if not assignment:
+        return 0.0
+    loc_map = {loc.location_id: loc for loc in locations}
+    outside = sum(
+        1 for lid in assignment.values()
+        if lid in loc_map
+        and haversine_distance(
+            threat_center_lat, threat_center_lon,
+            loc_map[lid].lat, loc_map[lid].lon,
+        ) > radius_km
+    )
+    return outside / len(assignment)

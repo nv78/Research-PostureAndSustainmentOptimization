@@ -2,6 +2,8 @@
 
 **Anote, Inc. | Defense Analytics Research**
 
+We propose a greedy placement and reinforcement learning framework for optimizing joint force sustainment scheduling across distributed theater locations, maximizing readiness coverage while minimizing logistics cost under stochastic asset degradation.
+
 ---
 
 ## Problem Context (DASH-5)
@@ -53,7 +55,7 @@ The problem maps naturally to a Markov Decision Process:
 | Readiness Score | Quantity-weighted mean readiness rate |
 | Coverage Score | Fraction of locations with ≥1 asset |
 | Sustainment Cost | Sum of action costs (REPOSITION=10, RESUPPLY=5, MAINTAIN=2, HOLD=0) |
-| Posture Efficiency | (readiness × coverage) / log(1 + cost) |
+| Posture Efficiency | (readiness × coverage) / log(2 + cost) |
 
 ---
 

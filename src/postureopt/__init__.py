@@ -1,4 +1,5 @@
 """postureopt: Posture and sustainment optimization package."""
+from .drsp import AdversarialModel, RobustCEVOptimizer, MinimaxOptimizer
 from .core import (
     AssetType,
     SustainmentAction,
@@ -25,6 +26,8 @@ from .evaluate import (
     pareto_efficient_profiles,
     scenario_weighted_readiness,
     evss,
+    assignment_stability,
+    contested_zone_coverage,
 )
 from .stats import (
     confidence_interval,
@@ -36,6 +39,9 @@ from .stats import (
 )
 
 __all__ = [
+    "AdversarialModel",
+    "RobustCEVOptimizer",
+    "MinimaxOptimizer",
     "AssetType",
     "SustainmentAction",
     "Location",
@@ -59,6 +65,8 @@ __all__ = [
     "pareto_efficient_profiles",
     "scenario_weighted_readiness",
     "evss",
+    "assignment_stability",
+    "contested_zone_coverage",
     "confidence_interval",
     "ci_str",
     "ci_latex",
