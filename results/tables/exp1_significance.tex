@@ -1,23 +1,23 @@
 \begin{table}[htbp]
 \centering
-\caption{Statistical significance and variance decomposition at $t = 10$. \textbf{Top}: paired $t$-tests (two-tailed) comparing greedy vs.\ random on each metric, and uniform vs.\ skewed SWR. Bonferroni-corrected $\alpha^* = 0.0083$ (6 comparisons). $^{{*}}$ denotes $p < \alpha^*$. $^{{\dagger}}$ metric is placement-invariant (zero variance in paired differences). \textbf{Bottom}: two-level variance decomposition of SWR (5 scenario seeds $\times$ 10 simulation seeds). ICC near 0 = initial-state randomness dominates; ICC near 1 = scenario-set choice dominates.}
+\caption{Statistical significance, effect sizes, and post-hoc power at $t = 10$. \textbf{Top}: paired $t$-tests (two-tailed) comparing greedy vs.\ random on each metric, and uniform vs.\ skewed SWR. Bonferroni-corrected $\alpha^* = 0.0083$ (6 comparisons). Cohen's $d$ = mean diff.\ / SD of differences; $|d| \geq 0.8$ is a large effect. Power computed via the noncentral $t$-distribution ($\lambda = |d|\sqrt{n}$). $^{{*}}$ denotes $p < \alpha^*$. $^{{\dagger}}$ metric is placement-invariant (zero variance in paired differences). \textbf{Bottom}: two-level variance decomposition of SWR (5 scenario seeds $\times$ 10 simulation seeds). ICC near 0 = initial-state randomness dominates; ICC near 1 = scenario-set choice dominates.}
 \label{tab:exp1_significance}
-\begin{tabular}{lcccc}
+\begin{tabular}{lccccc}
 \hline
-Metric & Mean diff. & $t$-stat & $p$-value \\
+Metric & Mean diff. & Cohen's $d$ & $t$-stat & $p$-value & Power \\
 \hline
-        Readiness (greedy vs.\ random) & +0.0000 & \multicolumn{2}{c}{n/a$^{\dagger}$} \\
-        Coverage (greedy vs.\ random) & -0.2000 & $-\infty$ & $<$0.0001$^{*}$ \\
-        Sustainment cost (greedy vs.\ random) & +0.0000 & \multicolumn{2}{c}{n/a$^{\dagger}$} \\
-        Posture efficiency (greedy vs.\ random) & -0.0555 & -18.571 & $<$0.0001$^{*}$ \\
-        SWR: uniform vs.\ skewed threat & +0.2610 & +45.696 & $<$0.0001$^{*}$ \\
+        Readiness (greedy vs.\ random) & +0.0000 & n/a$^{\dagger}$ & \multicolumn{2}{c}{n/a$^{\dagger}$} & n/a \\
+        Coverage (greedy vs.\ random) & -0.2000 & $-\infty$ & $-\infty$ & $<$0.0001$^{*}$ & 1.000 \\
+        Sustainment cost (greedy vs.\ random) & +0.0000 & n/a$^{\dagger}$ & \multicolumn{2}{c}{n/a$^{\dagger}$} & n/a \\
+        Posture efficiency (greedy vs.\ random) & -0.0555 & -5.87 & -18.571 & $<$0.0001$^{*}$ & 1.000 \\
+        SWR: uniform vs.\ skewed threat & +0.2610 & +14.45 & +45.696 & $<$0.0001$^{*}$ & 1.000 \\
 \hline
-\multicolumn{5}{l}{\textit{Variance decomposition of SWR}} \\
+\multicolumn{6}{l}{\textit{Variance decomposition of SWR}} \\
 \hline
-Condition & Outer var. & Inner var. & Total var. & ICC \\
+Condition & Outer var. & Inner var. & Total var. & ICC & \\
 \hline
-        Uniform threat & 0.00001 & 0.00106 & 0.00098 & 0.009 \\
-        Skewed threat & 0.00005 & 0.00023 & 0.00025 & 0.167 \\
+        Uniform threat & 0.00001 & 0.00106 & 0.00098 & 0.009 & \\
+        Skewed threat & 0.00005 & 0.00023 & 0.00025 & 0.167 & \\
 \hline
 \end{tabular}
 \end{table}

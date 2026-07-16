@@ -1,12 +1,13 @@
 """Statistical rigor utilities for postureopt experiments.
 
 Provides confidence intervals, significance testing, Bonferroni correction,
-and two-level variance decomposition — addressing issue #15 requirements
-for OR-journal-quality statistical validation.
+two-level variance decomposition, Cohen's d effect sizes, percentile bootstrap
+CIs, Shapiro-Wilk normality checks, and post-hoc power analysis.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Sequence
+import math
+from typing import Dict, List, Optional, Sequence, Union
 
 import numpy as np
 from scipy import stats as _scipy_stats
@@ -156,3 +157,119 @@ def variance_decomposition(data: Sequence[Sequence[float]]) -> Dict[str, float]:
         "n_outer": n_outer,
         "n_inner": n_inner,
     }
+
+
+# ---------------------------------------------------------------------------
+# Effect sizes
+# ---------------------------------------------------------------------------
+
+
+def cohens_d_paired(
+    samples_a: Sequence[float],
+    samples_b: Sequence[float],
+) -> float:
+    """Cohen's d for paired samples: mean(a - b) / SD(a - b).
+
+    Returns +inf / -inf when SD of differences is zero (deterministic gap).
+    Convention: |d| >= 0.8 is a large effect (Cohen 1988).
+    """
+    a = np.asarray(samples_a, dtype=float)
+    b = np.asarray(samples_b, dtype=float)
+    diff = a - b
+    sd = float(np.std(diff, ddof=1))
+    if sd == 0.0:
+        mean_d = float(diff.mean())
+        return math.copysign(math.inf, mean_d) if mean_d != 0.0 else 0.0
+    return float(diff.mean() / sd)
+
+
+# ---------------------------------------------------------------------------
+# Bootstrap confidence intervals
+# ---------------------------------------------------------------------------
+
+
+def bootstrap_ci_paired(
+    samples_a: Sequence[float],
+    samples_b: Sequence[float],
+    n_bootstrap: int = 5000,
+    confidence: float = 0.95,
+    seed: Optional[int] = None,
+) -> Dict[str, float]:
+    """Percentile bootstrap CI for the mean paired difference (a - b).
+
+    Uses resampling with replacement on the n paired differences.
+    Seed-fixed for reproducibility; set seed=None for a fresh draw.
+
+    Returns a dict with keys:
+        mean, lower, upper, n_bootstrap, confidence
+    """
+    rng = np.random.default_rng(seed)
+    a = np.asarray(samples_a, dtype=float)
+    b = np.asarray(samples_b, dtype=float)
+    diffs = a - b
+    n = len(diffs)
+    boot_means = np.array([
+        rng.choice(diffs, size=n, replace=True).mean()
+        for _ in range(n_bootstrap)
+    ])
+    alpha = 1.0 - confidence
+    lo = float(np.percentile(boot_means, 100 * alpha / 2))
+    hi = float(np.percentile(boot_means, 100 * (1 - alpha / 2)))
+    return {
+        "mean": float(diffs.mean()),
+        "lower": lo,
+        "upper": hi,
+        "n_bootstrap": n_bootstrap,
+        "confidence": confidence,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Normality check
+# ---------------------------------------------------------------------------
+
+
+def shapiro_wilk_paired(
+    samples_a: Sequence[float],
+    samples_b: Sequence[float],
+) -> Dict[str, float]:
+    """Shapiro-Wilk normality test on the paired differences (a - b).
+
+    Returns a dict with keys: W, p_value, n, normal (True if p > 0.05).
+    Not meaningful when differences have zero variance.
+    """
+    a = np.asarray(samples_a, dtype=float)
+    b = np.asarray(samples_b, dtype=float)
+    diffs = a - b
+    if float(np.std(diffs)) == 0.0:
+        return {"W": float("nan"), "p_value": float("nan"), "n": len(diffs), "normal": True}
+    W, p = _scipy_stats.shapiro(diffs)
+    return {"W": float(W), "p_value": float(p), "n": len(diffs), "normal": bool(p > 0.05)}
+
+
+# ---------------------------------------------------------------------------
+# Statistical power (post-hoc, paired two-tailed t-test)
+# ---------------------------------------------------------------------------
+
+
+def statistical_power_paired(
+    cohens_d: float,
+    n: int,
+    alpha: float = 0.05,
+) -> float:
+    """Post-hoc power for a paired two-tailed t-test via the noncentral t-distribution.
+
+    noncentrality parameter λ = |d| * sqrt(n).
+    Returns 1.0 for infinite d (deterministic comparisons).
+    """
+    if math.isinf(cohens_d) or math.isnan(cohens_d):
+        return 1.0
+    ncp = abs(cohens_d) * math.sqrt(n)
+    df = n - 1
+    t_crit = float(_scipy_stats.t.ppf(1.0 - alpha / 2.0, df=df))
+    power = (
+        1.0
+        - float(_scipy_stats.t.cdf(t_crit, df=df, loc=ncp))
+        + float(_scipy_stats.t.cdf(-t_crit, df=df, loc=ncp))
+    )
+    return float(np.clip(power, 0.0, 1.0))
