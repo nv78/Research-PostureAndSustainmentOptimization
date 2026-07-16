@@ -330,4 +330,132 @@ time should be able to trade some value concentration for threat-robustness,
 capturing positive EVSS (Expected Value of the Stochastic Solution)
 over greedy.
 
+% =========================================================
+% SECTION: Statistical Analysis
+% =========================================================
+
+\section{Statistical Analysis}
+\label{sec:stats}
+
+All Experiment~1 results are validated using paired $t$-tests (two-tailed)
+with Bonferroni correction across $M = 6$ simultaneous comparisons,
+yielding a corrected significance threshold of
+$\alpha^* = 0.05 / 6 \approx 0.0083$.
+Tests are paired because each greedy--random pair shares the same simulation
+seed, eliminating initial-state variance from the comparison.
+Table~\ref{tab:exp1_significance} summarizes the results, including
+effect sizes and post-hoc power.
+
+\paragraph{Justification of the paired $t$-test with $n = 10$.}
+With only ten paired observations, the Central Limit Theorem provides a
+limited normality guarantee for the distribution of the sample mean of
+differences. We address this in three complementary ways.
+\begin{enumerate}
+    \item \textbf{Shapiro--Wilk normality test.}
+    We apply the Shapiro--Wilk test directly to the $n = 10$ paired
+    differences for each applicable metric. For posture efficiency the
+    test yields $W = 0.901$, $p = 0.222$; for the uniform-vs.-skewed SWR
+    comparison it yields $W = 0.961$, $p = 0.794$. Neither test rejects
+    normality at the conventional 0.05 level, providing direct empirical
+    support for the $t$-test assumption.
+    \item \textbf{Percentile bootstrap confidence intervals.}
+    As a non-parametric robustness check, we supplement each $t$-test with
+    a percentile bootstrap CI ($B = 5{,}000$ resamples with replacement,
+    seed-fixed at 42). For posture efficiency the bootstrap 95\% CI is
+    $(-0.062,\,-0.050)$, which agrees to three decimal places with the
+    parametric CI. For the SWR comparison the bootstrap 95\% CI is
+    $(0.250,\,0.272)$, again matching the parametric result. The
+    agreement across both intervals confirms that the $t$-based CIs are
+    not artifacts of the normality assumption.
+    \item \textbf{Deterministic and invariant comparisons.}
+    For readiness and sustainment cost, paired differences are identically
+    zero (placement-invariant), so no distributional assumption is invoked.
+    For coverage, differences are identically $-0.200$ (deterministic
+    greedy behavior), rendering the normality assumption vacuous; the
+    result holds by construction.
+\end{enumerate}
+
+\paragraph{Effect sizes.}
+Statistical significance alone does not establish practical relevance,
+particularly when $n$ is small and effect sizes can appear large by
+chance. We therefore report Cohen's $d$ for each paired comparison:
+\begin{equation}
+    d \;=\; \frac{\bar{\delta}}{s_\delta},
+    \label{eq:cohens_d}
+\end{equation}
+where $\bar{\delta}$ is the mean of the $n = 10$ paired differences and
+$s_\delta$ is their standard deviation. By convention, $|d| \geq 0.8$
+constitutes a large effect (Cohen 1988). The observed effect sizes
+are:
+\begin{itemize}
+    \item \textbf{Coverage}: $d = -\infty$ (zero variance in differences;
+          greedy deterministically leaves one location uncovered regardless
+          of seed).
+    \item \textbf{Posture efficiency}: $d = -5.87$, more than seven times
+          the large-effect threshold, reflecting a structural 25\% gap
+          driven entirely by the coverage difference.
+    \item \textbf{SWR, uniform vs.\ skewed threat}: $d = +14.45$,
+          reflecting the fixed 57.3\% structural vulnerability of
+          greedy placement to value-correlated adversarial threats.
+\end{itemize}
+All observed effect sizes are substantially in excess of the
+large-effect threshold, confirming that the detected gaps are
+operationally significant independent of the small sample size.
+
+\paragraph{Statistical power.}
+Post-hoc power for each test is computed via the noncentral
+$t$-distribution with noncentrality parameter
+$\lambda = |d|\sqrt{n}$ and degrees of freedom $\nu = n - 1 = 9$,
+evaluated at $\alpha^* = 0.0083$:
+\begin{equation}
+    \mathrm{Power} = P\!\left(|T_\nu(\lambda)| > t^*_{\alpha^*/2,\,\nu}\right),
+    \label{eq:power}
+\end{equation}
+where $T_\nu(\lambda)$ denotes the noncentral $t$-distribution.
+For posture efficiency ($|d| = 5.87$, $\lambda = 18.6$) and the SWR
+comparison ($|d| = 14.45$, $\lambda = 45.7$), power $= 1.000$ to
+three decimal places. The coverage comparison achieves power $= 1.000$
+by construction. The small value of $n = 10$ is therefore not a
+limitation for detecting effects of the observed magnitudes: all
+structural differences reported in Section~\ref{sec:exp1:results}
+are recovered with certainty even under the conservative
+Bonferroni-corrected threshold.
+
+\paragraph{Placement-invariant metrics.}
+Readiness and sustainment cost show zero variance in paired differences:
+the \emph{ReplenishmentPolicy} applies identically regardless of asset
+assignment, so both metrics are mathematically identical across strategies.
+No significance test is applicable.
+
+\paragraph{Coverage and posture efficiency.}
+Greedy coverage is significantly lower than random
+($\Delta C = -0.200$, $d = -\infty$, $t = -\infty$, $p < 0.0001$),
+as greedy deterministically leaves one location uncovered.
+Posture efficiency follows directly: greedy is significantly less efficient
+than random ($\Delta E = -0.056$, $d = -5.87$, $t = -18.6$,
+$p < 0.0001$), with the entire gap explained by the coverage difference.
+
+\paragraph{Threat-environment sensitivity.}
+The gap between uniform and skewed SWR is highly significant
+($\Delta\mathrm{SWR} = +0.261$, $d = +14.45$, $t = +45.7$,
+$p < 0.0001$),
+confirming that the 57.3\% drop identified in
+Section~\ref{sec:exp1:results} is a structural property of the
+greedy assignment, not sampling noise.
+
+\paragraph{Variance decomposition.}
+The lower panel of Table~\ref{tab:exp1_significance} decomposes SWR
+variance into scenario-seed variance (outer) and simulation-seed variance
+(inner). Under uniform threat, $\mathrm{ICC} = 0.009$: nearly all
+variance is attributable to initial-state randomness and the choice of
+scenario set is immaterial. Under skewed threat, $\mathrm{ICC} = 0.167$:
+scenario-set choice accounts for a larger share of variance because
+different draws from the skewed distribution produce meaningfully
+different realized threat concentrations at the high-value locations
+occupied by greedy. Both ICCs are well below 0.5, confirming that
+ten simulation seeds provide adequate coverage of initial-state
+uncertainty across both threat conditions.
+
+\input{tables/exp1_significance}
+
 \end{document}

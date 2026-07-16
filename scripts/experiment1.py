@@ -45,9 +45,13 @@ from postureopt.evaluate import (
 )
 from postureopt.stats import (
     bonferroni_correct,
+    bootstrap_ci_paired,
     ci_latex,
+    cohens_d_paired,
     confidence_interval,
     paired_ttest,
+    shapiro_wilk_paired,
+    statistical_power_paired,
     variance_decomposition,
 )
 
@@ -268,20 +272,26 @@ def compute_significance(
     rm: Dict[str, np.ndarray],
     threat: Dict[str, np.ndarray],
 ) -> Dict[str, dict]:
-    """Paired t-tests at t=10, Bonferroni-corrected for N_COMPARISONS tests."""
+    """Paired t-tests at t=10 with Cohen's d, bootstrap CIs, Shapiro-Wilk, and power."""
     adj_alpha = bonferroni_correct(1 - CONFIDENCE, N_COMPARISONS)
     t = N_STEPS
-    return {
-        "readiness":   paired_ttest(gm["readiness"][:, t],  rm["readiness"][:, t],  adj_alpha),
-        "coverage":    paired_ttest(gm["coverage"][:, t],   rm["coverage"][:, t],   adj_alpha),
-        "cost":        paired_ttest(gm["cost"][:, t],        rm["cost"][:, t],        adj_alpha),
-        "efficiency":  paired_ttest(gm["efficiency"][:, t], rm["efficiency"][:, t], adj_alpha),
-        "swr_uniform": paired_ttest(
-            threat["uniform"][:, t],
-            threat["skewed"][:, t],
-            adj_alpha,
-        ),
+    pairs = {
+        "readiness":   (gm["readiness"][:, t],  rm["readiness"][:, t]),
+        "coverage":    (gm["coverage"][:, t],   rm["coverage"][:, t]),
+        "cost":        (gm["cost"][:, t],        rm["cost"][:, t]),
+        "efficiency":  (gm["efficiency"][:, t], rm["efficiency"][:, t]),
+        "swr_uniform": (threat["uniform"][:, t], threat["skewed"][:, t]),
     }
+    results = {}
+    for key, (a, b) in pairs.items():
+        tt = paired_ttest(a, b, adj_alpha)
+        d  = cohens_d_paired(a, b)
+        bci = bootstrap_ci_paired(a, b, n_bootstrap=5000, confidence=CONFIDENCE, seed=42)
+        sw  = shapiro_wilk_paired(a, b)
+        pwr = statistical_power_paired(d, n=len(a), alpha=adj_alpha)
+        results[key] = {**tt, "cohens_d": d, "bootstrap_ci": bci,
+                        "shapiro_wilk": sw, "power": pwr}
+    return results
 
 
 # ---------------------------------------------------------------------------
@@ -413,14 +423,30 @@ def latex_sensitivity_table(threat: Dict[str, np.ndarray]) -> str:
 def _fmt_ttest_row(label: str, r: dict) -> str:
     """Format one significance-table row, handling NaN/inf gracefully."""
     diff_str = f"{r['mean_diff']:+.4f}"
+    d = r.get("cohens_d", float("nan"))
+    pwr = r.get("power", float("nan"))
+
     if math.isnan(r["t_stat"]):
-        # Placement-invariant metric: differences are identically zero
-        t_str = r"\multicolumn{2}{c}{n/a$^{\dagger}$}"
-        return f"        {label} & {diff_str} & {t_str} \\\\"
+        # Placement-invariant: differences identically zero
+        d_str = r"n/a$^{\dagger}$"
+        return (
+            f"        {label} & {diff_str} & {d_str} & "
+            r"\multicolumn{2}{c}{n/a$^{\dagger}$} & n/a \\"
+        )
+
+    # Cohen's d display
+    if math.isinf(d):
+        d_str = r"$-\infty$" if d < 0 else r"$+\infty$"
+    else:
+        d_str = f"{d:+.2f}"
+
     star = "$^{*}$" if r["reject_null"] else ""
     p_str = "$<$0.0001" if r["p_value"] < 0.0001 else f"{r['p_value']:.4f}"
     t_val = f"{r['t_stat']:+.3f}" if not math.isinf(r["t_stat"]) else r"$-\infty$"
-    return f"        {label} & {diff_str} & {t_val} & {p_str}{star} \\\\"
+    pwr_str = f"{pwr:.3f}" if not math.isnan(pwr) else "---"
+    return (
+        f"        {label} & {diff_str} & {d_str} & {t_val} & {p_str}{star} & {pwr_str} \\\\"
+    )
 
 
 def latex_significance_table(
@@ -441,7 +467,7 @@ def latex_significance_table(
 
     dec_rows = "\n".join(
         f"        {lbl} & {decomp[c]['outer_var']:.5f} & {decomp[c]['inner_var']:.5f}"
-        f" & {decomp[c]['total_var']:.5f} & {decomp[c]['icc']:.3f} \\\\"
+        f" & {decomp[c]['total_var']:.5f} & {decomp[c]['icc']:.3f} & \\\\"
         for c, lbl in (("uniform", "Uniform threat"), ("skewed", "Skewed threat"))
     )
 
@@ -451,10 +477,12 @@ def latex_significance_table(
     return (
         r"\begin{table}[htbp]" "\n"
         r"\centering" "\n"
-        rf"\caption{{Statistical significance and variance decomposition at $t = {N_STEPS}$. "
+        rf"\caption{{Statistical significance, effect sizes, and post-hoc power at $t = {N_STEPS}$. "
         r"\textbf{Top}: paired $t$-tests (two-tailed) comparing greedy vs.\ random "
         r"on each metric, and uniform vs.\ skewed SWR. "
         rf"Bonferroni-corrected $\alpha^* = {adj_alpha:.4f}$ ({N_COMPARISONS} comparisons). "
+        r"Cohen's $d$ = mean diff.\ / SD of differences; $|d| \geq 0.8$ is a large effect. "
+        r"Power computed via the noncentral $t$-distribution ($\lambda = |d|\sqrt{n}$). "
         r"$^{{*}}$ denotes $p < \alpha^*$. "
         r"$^{{\dagger}}$ metric is placement-invariant (zero variance in paired differences). "
         r"\textbf{Bottom}: two-level variance decomposition of SWR "
@@ -462,15 +490,15 @@ def latex_significance_table(
         r"ICC near 0 = initial-state randomness dominates; "
         r"ICC near 1 = scenario-set choice dominates.}" "\n"
         r"\label{tab:exp1_significance}" "\n"
-        r"\begin{tabular}{lcccc}" "\n"
+        r"\begin{tabular}{lccccc}" "\n"
         r"\hline" "\n"
-        r"Metric & Mean diff. & $t$-stat & $p$-value \\" "\n"
+        r"Metric & Mean diff. & Cohen's $d$ & $t$-stat & $p$-value & Power \\" "\n"
         r"\hline" "\n"
         f"{sig_rows}\n"
         r"\hline" "\n"
-        r"\multicolumn{5}{l}{\textit{Variance decomposition of SWR}} \\" "\n"
+        r"\multicolumn{6}{l}{\textit{Variance decomposition of SWR}} \\" "\n"
         r"\hline" "\n"
-        r"Condition & Outer var. & Inner var. & Total var. & ICC \\" "\n"
+        r"Condition & Outer var. & Inner var. & Total var. & ICC & \\" "\n"
         r"\hline" "\n"
         f"{dec_rows}\n"
         r"\hline" "\n"
