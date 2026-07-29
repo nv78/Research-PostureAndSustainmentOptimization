@@ -6,9 +6,9 @@ We propose a greedy placement and reinforcement learning framework for optimizin
 
 ---
 
-## Problem Context (DASH-5)
+## Problem Context
 
-Modern joint force sustainment planning requires optimizing the placement and replenishment of military assets across distributed theater locations under uncertainty. The **DASH-5** problem involves scheduling maintenance, resupply, and repositioning actions to maintain readiness while minimizing logistics cost across M assets, N locations, and T planning horizons.
+Modern joint force sustainment planning requires optimizing the placement and replenishment of military assets across distributed theater locations under uncertainty. The problem involves scheduling maintenance, resupply, and repositioning actions to maintain readiness while minimizing logistics cost across M assets, N locations, and T planning horizons.
 
 ---
 
@@ -86,20 +86,6 @@ pytest tests/ -v --cov=src
 
 ---
 
-## Venues
-
-This research is suitable for reframing toward:
-- **DAI 2026** (Defense AI)
-- **MILCOM** (sustainment scheduling track)
-- **NeurIPS** (RL for logistics)
-
----
-
-## Government Disclaimer
-
-This research is conducted independently by Anote, Inc. Any resemblance to specific classified programs is coincidental. No export-controlled data is used.
-
----
 
 ## Citation
 
