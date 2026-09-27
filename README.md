@@ -1,3 +1,7 @@
+> [!NOTE]
+> **Mirror of [anote-ai/Research-PostureAndSustainmentOptimization](https://github.com/anote-ai/Research-PostureAndSustainmentOptimization).** Built at [Anote](https://github.com/anote-ai), which I founded, together with the contributors in this repository's commit history.
+> The original is the maintained version. Please open issues and PRs there.
+
 # Research: Posture and Sustainment Optimization
 
 **Anote, Inc. | Defense Analytics Research**
